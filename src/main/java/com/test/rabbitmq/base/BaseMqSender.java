@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Collections;
 
 public class BaseMqSender extends BaseMQer {
 
@@ -23,7 +24,7 @@ public class BaseMqSender extends BaseMQer {
     private String mType;
 
 
-    protected BaseMqSender(String host, int port, String userName, String password, String vhost) {
+    public BaseMqSender(String host, int port, String userName, String password, String vhost) {
         super(host, port, userName, password, vhost);
     }
 
@@ -52,7 +53,7 @@ public class BaseMqSender extends BaseMQer {
                 return;
             } catch (AlreadyClosedException | IOException e) {
                 this.setConnStatus(CONNECTIONSTATUS.DISCONNECTED);
-                if(tryTimes == 0){
+                if (tryTimes == 0) {
                     throw new IllegalArgumentException("发送两次失败");
                 }
             }

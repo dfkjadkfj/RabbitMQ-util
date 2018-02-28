@@ -26,9 +26,9 @@ public class BaseMQConnection {
         //设置连接超时
         this.mFactory.setConnectionTimeout(10000);
         //设置连接恢复间隔。默认值是5000
-        this.mFactory.setNetworkRecoveryInterval(5000);
+//        this.mFactory.setNetworkRecoveryInterval(5000);
         //设置请求的心跳 param： 最初请求的心跳间隔，以秒为单位
-        this.mFactory.setRequestedHeartbeat(6000);
+//        this.mFactory.setRequestedHeartbeat(6000);
         /**
          * 连接恢复机制
          *      1.设置ConnectionFactory.automaticRecovery = true
@@ -36,11 +36,11 @@ public class BaseMQConnection {
          *      3.调用init方法会set 链接恢复的listener
          */
         //设置崩溃自动恢复  默认fasle
-        this.mFactory.setAutomaticRecoveryEnabled(true);
+//        this.mFactory.setAutomaticRecoveryEnabled(true);
         //设置自动连接恢复间隔  参数如果是int就是秒  如果是long就是毫秒
-        this.mFactory.setNetworkRecoveryInterval(3);
+//        this.mFactory.setNetworkRecoveryInterval(3);
         //（队列，交换，绑定，消费者）恢复
-        this.mFactory.setTopologyRecoveryEnabled(true);
+//        this.mFactory.setTopologyRecoveryEnabled(true);
 
         this.log.info("set mq connection: username<{}> host<{}> port<{}>", new Object[]{userName, host, port, vhost});
     }

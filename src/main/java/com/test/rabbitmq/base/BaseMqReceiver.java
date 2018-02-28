@@ -1,8 +1,5 @@
 package com.test.rabbitmq.base;
 
-import com.rabbitmq.client.ConsumerCancelledException;
-import com.rabbitmq.client.QueueingConsumer;
-import com.rabbitmq.client.ShutdownSignalException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,15 +7,19 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 
 public class BaseMqReceiver extends BaseMQer {
 
     private static Logger log = LoggerFactory.getLogger(BaseMqReceiver.class);
 
-    private QueueingConsumer mConsumer;
+    private MyConsumer mConsumer;
 
+    private ConsumerHandler consumerHandler;
+
+    //TODO
+    //这个版本先支持 同一个交换机下的不同 RK
+    //可以做成不同的 交换级 不同的类型 不同的rk这种
     private Set<String> mRoutingKeys = null;
 
     private String mExchange;
@@ -36,14 +37,12 @@ public class BaseMqReceiver extends BaseMQer {
     private boolean hasQueue = false;
     //队列名字
     private String queue;
-    //是否是独占队列
+    //是否是独占队列(如果生明成独占队列值在当前链接有效,链接关闭 队列删除)
     private boolean mQueueExclusive = false;
 
     private int mQos = 10;
 
     private int timeout = 0;
-
-    private boolean isClose = false;
 
     public void connect() {
         try {
@@ -58,7 +57,7 @@ public class BaseMqReceiver extends BaseMQer {
                 //声明一个队列
                 this.mChannel.queueDeclare(this.queue, this.mQueueDurable, this.mQueueExclusive, this.mAutoDelete, null);
             } else {//临时队列
-                this.mChannel.queueDeclare();
+                this.queue = this.mChannel.queueDeclare().getQueue();
             }
 
             Iterator<String> it = this.mRoutingKeys.iterator();
@@ -68,75 +67,26 @@ public class BaseMqReceiver extends BaseMQer {
                 mChannel.queueBind(queue, mExchange, routingKey);
             }
             this.mChannel.basicQos(mQos);
-            this.setmConsumer(new QueueingConsumer(this.mChannel));
-            this.mChannel.basicConsume(queue, mAutoAct, this.mConsumer);
+            if (consumerHandler != null) {
+                MyConsumer myConsumer = new MyConsumer(this.mChannel, consumerHandler, mAutoAct);
+                this.mChannel.basicConsume(this.queue, mAutoAct, myConsumer);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public QueueingConsumer.Delivery recvDelivery() {
-        return this.recvDelivery(0L);
-    }
-
-    public QueueingConsumer.Delivery recvDelivery(long to) {
-        while (true) {
-            try {
-                if (this.getConnStatus() == CONNECTIONSTATUS.DISCONNECTED) {
-                    this.connect();
-                }
-
-                QueueingConsumer.Delivery delivery = null;
-                if (to == 0L) {
-                    to = this.timeout;
-                }
-
-                if (to > 0L) {
-                    delivery = this.mConsumer.nextDelivery(to);
-                    if (delivery == null) {
-                    }
-                } else {
-                    delivery = this.mConsumer.nextDelivery();
-                }
-
-                return delivery;
-            } catch (ShutdownSignalException var4) {
-                this.setConnStatus(CONNECTIONSTATUS.DISCONNECTED);
-                var4.printStackTrace();
-
-            } catch (InterruptedException | ConsumerCancelledException var5) {
-                var5.printStackTrace();
-            }
-        }
-    }
-
-    public void handleCancel() {
-        log.debug("cancel mq recving");
-        try {
-            this.mConsumer.handleCancel("");
-        } catch (IOException var2) {
-            var2.printStackTrace();
-        }
-
-    }
-
-    public void close() {
-        this.isClose = true;
-        this.handleCancel();
-        super.close();
-    }
-
-    protected BaseMqReceiver(String host, int port, String userName, String password, String vhost) {
+    public BaseMqReceiver(String host, int port, String userName, String password, String vhost) {
         super(host, port, userName, password, vhost);
         this.mRoutingKeys = new HashSet<>();
     }
 
-    public void setmConsumer(QueueingConsumer mConsumer) {
-        this.mConsumer = mConsumer;
+    public void setConsumerHandler(ConsumerHandler consumerHandler) {
+        this.consumerHandler = consumerHandler;
     }
 
-    public void setmRoutingKeys(Set<String> mRoutingKeys) {
-        this.mRoutingKeys = mRoutingKeys;
+    public void addRoutingKeys(String mRoutingKey) {
+        this.mRoutingKeys.add(mRoutingKey);
     }
 
     public void setmExchange(String mExchange) {
